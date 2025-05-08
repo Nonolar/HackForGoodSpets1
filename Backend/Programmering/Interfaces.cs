@@ -11,7 +11,7 @@ interface Tokens{
     public enum Tokens;
     public Tokens[] Parse(string JSON);
 }
-interface Parser{
+interface IParser{
     public enum Stmt;
     public  Stmt[] Parse(Enum[] Tokens);
 }
