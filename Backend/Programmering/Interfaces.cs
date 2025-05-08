@@ -2,21 +2,21 @@ using System.Net;
 
 interface HTTPDecoder{
     //public event EventHandler GotHTTP;
-    public string GetLatestRequest();
-    public bool SendResponse(byte[] bytes);
+    public Task<string?> GetLatestRequest();
+    public Task<bool> SendResponse(byte[] bytes);
     public byte[] JsonToByte(string Json);
 }
 
-interface Tokens{
-    public enum Tokens;
-    public Tokens[] Parse(string JSON);
+interface ITokens{
+    public struct Tokens;
+    public ITokens.Tokens[] Parse(string JSON);
 }
-interface Parser{
+interface IParser{
     public enum Stmt;
-    public  Stmt[] Parse(Enum[] Tokens);
+    public  Stmt[] Parse(ITokens.Tokens[] Tokens);
 }
 
 
-interface Generator{
+interface IGenerator{
     public string Generate(Enum[] Stmnts);
 }
