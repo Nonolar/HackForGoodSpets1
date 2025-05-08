@@ -15,11 +15,16 @@ class Program
         IParser parser; //Non implemented yet
         IGenerator generator; //Non implemented Yet
         while(true){
+            //Console.WriteLine("Getting Json");
             string OldestJson = await hTTP.GetLatestRequest();
+            //Console.WriteLine(OldestJson);
             if(OldestJson == null) continue;
-            ITokens.Tokens[] ParsedTOkens = tokens.Parse(OldestJson); 
+            Console.WriteLine(OldestJson);
+            Tokens[] ParsedTOkens = tokens.Parse(OldestJson).Select(t => (Tokens)t).ToArray(); 
             //IParser.Stmt[] Stmts = parser.Parse(ParsedTOkens);
             //string code = generator.Generate(ParsedTOkens);
+
+            await hTTP.SendResponse(hTTP.JsonToByte("Test"));
         }
         Console.ReadKey();
         

@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Security.Principal;
 using System.Diagnostics;
+using System.Text;
 
 namespace HTTPHandlerer;
 
@@ -96,27 +97,37 @@ class HTTPUtils : HTTPDecoder
     }
     async Task ListenLoop(){
         Console.WriteLine("Trying to start");
-        try{
-            Listener.Start();
-        }catch(Exception ex){
-            Console.WriteLine(ex.Message);
-        }
+        
         while(true){
             HttpListenerContext context = await Listener.GetContextAsync();
 
             HttpListenerRequest Request = context.Request;
             HttpListenerResponse Response = context.Response;
-
+            Console.WriteLine(Request.HttpMethod);
             if(Request.HttpMethod == "OPTIONS"){
                 Response.StatusCode = 200;
-                Response.Headers.Add("Allow", "GET");
+                Response.Headers.Add("Allow", "POST");
+                Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                Response.Headers.Add("Access-Control-Allow-Methods", "POST, OPTIONS");
+                Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 Response.Close();
+                continue;
             }
 
-            //Let's not for the moment implement a POST. Options should only return GET
-            if(Request.HttpMethod == "GET"){
-                //Add the thing to a ASYNCQue
-                asyncQue.Append(context);
+            if(Request.HttpMethod == "POST"){
+                Console.WriteLine("Posting to queue");
+                try{
+                    asyncQue.Enqueue(context); // Use Enqueue instead of Append
+                }catch(Exception ex){
+                    Console.WriteLine($"Failed to enqueue request: {ex.Message}");
+                    Response.StatusCode = 500;
+                    Response.Close();
+                }
+                // Don't close the response here as we'll handle it in SendResponse
+            } else {
+                // For any other HTTP method
+                Response.StatusCode = 405; // Method Not Allowed
+                Response.Headers.Add("Allow", "POST, OPTIONS");
                 Response.Close();
             }
         }
@@ -126,23 +137,46 @@ class HTTPUtils : HTTPDecoder
 
     public async Task<string?> GetLatestRequest()
     {
+        //Console.WriteLine("Kör");
         if(asyncQue.IsEmpty) return null;
         HttpListenerContext? ToReturn;
+        Console.WriteLine("Kör");
         
         asyncQue.TryPeek(out ToReturn);
         Console.WriteLine(ToReturn.Request.ToString());
-        if(ToReturn != null) return ToReturn.Request.ToString();
+        using (var reader = new StreamReader(ToReturn.Request.InputStream, ToReturn.Request.ContentEncoding))
+        {
+            string jsonContent = await reader.ReadToEndAsync();
+            return jsonContent;
+        }
         return null;
     }
 
 
     public async Task<bool> SendResponse(byte[] bytes)
     {
-        throw new NotImplementedException();
+        Console.WriteLine("Sending bytes");
+        HttpListenerContext context ;
+        asyncQue.TryDequeue(out context);
+        if(context == null) return false;
+        HttpListenerResponse response = context.Response;
+        try{
+            response.StatusCode = 200;
+            System.IO.Stream output = response.OutputStream;
+            Console.WriteLine("Starting broadcast");
+            await output.WriteAsync(bytes, 0, bytes.Length);
+            output.Close();
+            response.Close();
+            Console.WriteLine("Output closed");
+            return true;
+        }catch(Exception ex){
+            Console.WriteLine($"Uncaught error: {ex.Message}");
+            return false;
+        }
     }
 
     public byte[] JsonToByte(string Json)
     {
-        throw new NotImplementedException();
+        return Encoding.UTF8.GetBytes(Json);
     }
 }

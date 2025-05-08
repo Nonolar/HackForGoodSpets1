@@ -7,13 +7,14 @@ interface HTTPDecoder{
     public byte[] JsonToByte(string Json);
 }
 
+public interface ITokensStruct;
 interface ITokens{
-    public struct Tokens;
-    public ITokens.Tokens[] Parse(string JSON);
+    
+    public ITokensStruct[] Parse(string JSON);
 }
 interface IParser{
     public enum Stmt;
-    public  Stmt[] Parse(ITokens.Tokens[] Tokens);
+    public  Stmt[] Parse(ITokensStruct Tokens);
 }
 
 
